@@ -1,7 +1,7 @@
 heat_template_version: 2014-10-16
 
 description: |
-  Create a Rackspace cloud server with gluster installed
+  Create a Rackspace cloud server with gluster and a brick.
 
 resources:
   ssh_key:
@@ -9,11 +9,16 @@ resources:
     properties:
       name: private_access_key
       save_private_key: true
-  gluster_server:
+
+  gluster_bricks:
+    type: OS::Cinder::Volume
+    properties:
+      size: 75
+
+  gluster_servers:
     type: OS::Nova::Server
     properties:
-      name: Single Server Gluster Stack
-      admin_pass: <glusteradminpassword>
+      name: n-%index%
       flavor: 1 GB General Purpose v1
       image: CentOS 7 (PVHVM) (Orchestration)
       key_name: { get_resource: ssh_key }
@@ -34,10 +39,18 @@ resources:
             firewall-cmd --zone=public --add-port=24007-24008/tcp --permanent
             # reload firewall rules
             firewall-cmd --reload
+
+  volume_attachment_server1_brick1:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: gluster_bricks }
+      instance_uuid: { get_resource: gluster_servers }
+      mountpoint: /dev/xvdc
+
 outputs:
   server_ip:
     value:
-      get_attr: [gluster_server, accessIPv4]
+      get_attr: [gluster_servers, accessIPv4]
   private_key:
     value:
       get_attr: [ssh_key, private_key]
