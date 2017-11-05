@@ -4,6 +4,11 @@ description: |
   Create a Rackspace cloud server with gluster installed
 
 resources:
+  ssh_key:
+    type: OS::Nova::KeyPair
+    properties:
+      name: private_access_key
+      save_private_key: true
   gluster_server:
     type: OS::Nova::Server
     properties:
@@ -11,6 +16,7 @@ resources:
       admin_pass: <glusteradminpassword>
       flavor: 1 GB General Purpose v1
       image: CentOS 7 (PVHVM) (Orchestration)
+      key_name: { get_resource: ssh_key }
       user_data_format: RAW
       user_data: |
             #!/bin/bash -x
@@ -29,6 +35,9 @@ resources:
             # reload firewall rules
             firewall-cmd --reload
 outputs:
-  public_ip:
-    description: public IP address of the deployed compute instance
-    value: { get_attr: [gluster_server, accessIPv4] }
+  server_ip:
+    value:
+      get_attr: [gluster_server, accessIPv4]
+  private_key:
+    value:
+      get_attr: [ssh_key, private_key]
