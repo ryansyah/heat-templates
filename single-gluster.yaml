@@ -1,0 +1,34 @@
+heat_template_version: 2014-10-16
+
+description: |
+  Create a Rackspace cloud server with gluster installed
+
+resources:
+  gluster_server:
+    type: OS::Nova::Server
+    properties:
+      name: Single Server Gluster Stack
+      admin_pass: <glusteradminpassword>
+      flavor: 1 GB General Purpose v1
+      image: CentOS 7 (PVHVM) (Orchestration)
+      user_data_format: RAW
+      user_data: |
+            #!/bin/bash -x
+            # Enable EPEL for dependencvies
+            yum -y install http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+            # setup Gluster SIG repo
+            yum -y install centos-release-gluster38
+            # install gluster, samba
+            yum -y install glusterfs-server samba
+            # enable service
+            systemctl enable glusterd.service
+            # start service
+            systemctl start glusterd.service
+            # add open up ports on firewall
+            firewall-cmd --zone=public --add-port=24007-24008/tcp --permanent
+            # reload firewall rules
+            firewall-cmd --reload
+outputs:
+  public_ip:
+    description: public IP address of the deployed compute instance
+    value: { get_attr: [gluster_server, accessIPv4] }
