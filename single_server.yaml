@@ -1,0 +1,14 @@
+heat_template_version: 2014-10-16
+
+resources:
+  compute_instance:
+    type: OS::Nova::Server
+    properties:
+      flavor: 1 GB General Purpose v1
+      image: CentOS 7 (PVHVM) (Orchestration)
+      name: Single Server Stack
+
+outputs:
+  public_ip:
+    description: public IP address of the deployed compute instance
+    value: { get_attr: [compute_instance, accessIPv4] }
