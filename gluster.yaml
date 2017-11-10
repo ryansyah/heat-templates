@@ -29,12 +29,23 @@ parameters:
     description: hostname of the server
     default: n%index%c%index%
 
+  volume_size:
+    type: number
+    description: Size of the cloud block storage device (brick) to be created.
+    default: 75
+    constraints:
+    - range:
+        min: 75
+        max: 1024
+      description: must be between 75 and 1024 GB.
+
+
 resources:
 
   gluster_brick:
     type: OS::Cinder::Volume
     properties:
-      size: 75
+      size: { get_param: volume_size }
 
   gluster_server:
     type: OS::Nova::Server

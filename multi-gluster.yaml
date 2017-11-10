@@ -18,6 +18,19 @@ parameters:
     label: Key name
     description: Name of key-pair to be installed on the compute instance.
     default: my_key
+  volume_size:
+    type: number
+    description: Size of the cloud block storage device (brick) to be created.
+    default: 75
+    constraints:
+    - range:
+        min: 75
+        max: 1024
+      description: must be between 75 and 1024 GB.
+  gluster_count:
+    type: number
+    description: Number of luster server instances to provision
+    default: 2
 
 resources:
   ssh_key:
@@ -28,7 +41,7 @@ resources:
   multi-gluster:
     type: OS::Heat::ResourceGroup
     properties:
-      count: 2
+      count: { get_param: gluster_count }
       resource_def:
         type: gluster.yaml
         properties:
@@ -36,6 +49,7 @@ resources:
           flavor: { get_param: flavor }
           name: n%index%c%index%
           key: { get_resource: ssh_key } 
+          volume_size:  { get_param: volume_size }
 outputs:
   private_key:
     description: Private key
