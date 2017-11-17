@@ -29,7 +29,8 @@ parameters:
       description: must be between 75 and 1024 GB.
   gluster_count:
     type: number
-    description: Number of luster server instances to provision
+    label: Gluster Server Count
+    description: Number of gluster server instances to provision
     default: 2
 
 resources:
@@ -42,12 +43,13 @@ resources:
     type: OS::Heat::ResourceGroup
     properties:
       count: { get_param: gluster_count }
+      removal_policies: [{'resource_list': ['0']}]
       resource_def:
         type: gluster.yaml
         properties:
           image: { get_param: image }
           flavor: { get_param: flavor }
-          name: n%index%c%index%
+          name: c1n%index%
           key: { get_resource: ssh_key } 
           volume_size:  { get_param: volume_size }
 outputs:
