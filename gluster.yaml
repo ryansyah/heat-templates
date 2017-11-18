@@ -27,7 +27,7 @@ parameters:
     type: string
     label: server name
     description: hostname of the server
-    default: n%index%c%index%
+    default: c1n%index%
 
   volume_size:
     type: number
@@ -61,8 +61,8 @@ resources:
             yum -y install http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
             # setup Gluster SIG repo
             yum -y install centos-release-gluster38
-            # install gluster, samba
-            yum -y install glusterfs-server samba
+            # install gluster, samba, lvm2
+            yum -y install glusterfs-server samba lvm2
             # enable service
             systemctl enable glusterd.service
             # start service
