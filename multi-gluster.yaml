@@ -1,6 +1,6 @@
-heat_template_version: 2015-04-30
+heat_template_version: 2015-10-15
 
-description: Template that installs multiple gluster servers, bricks.
+description: Template that installs multiple gluster servers with attached volumes.
 
 parameters:
   image:
@@ -51,6 +51,8 @@ resources:
           flavor: { get_param: flavor }
           name: c1n%index%
           key: { get_resource: ssh_key } 
+          pubkey: { get_attr: [ssh_key, public_key] }
+          privkey: { get_attr: [ssh_key, private_key] }
           volume_size:  { get_param: volume_size }
 outputs:
   private_key:
