@@ -52,7 +52,6 @@ parameters:
         max: 1024
       description: must be between 75 and 1024 GB.
 
-
 resources:
 
   gluster_volume:

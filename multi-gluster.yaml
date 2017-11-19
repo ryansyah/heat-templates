@@ -1,6 +1,7 @@
 heat_template_version: 2015-10-15
 
-description: Template that installs multiple gluster servers with attached volumes.
+description: |
+  Template that installs multiple gluster servers with attached volumes.
 
 parameters:
   image:
