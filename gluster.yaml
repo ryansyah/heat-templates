@@ -69,6 +69,35 @@ resources:
       user_data_format: SOFTWARE_CONFIG
       user_data: |
         #!/bin/bash -x
+        logger "$0: System Installed..."
+
+  volume_attachment_gluster:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: gluster_volume }
+      instance_uuid: { get_resource: gluster_server }
+      mountpoint: /dev/xvdc
+
+## SoftwareConfig Section
+
+  update_system_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: Updating system..."
+        yum update -y
+
+  gluster_service_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: Installing Gluster..."
         # setup Gluster SIG repo
         yum -y install centos-release-gluster38
         # install gluster, samba, lvm2
@@ -82,15 +111,30 @@ resources:
         # reload firewall rules
         firewall-cmd --reload
 
-  volume_attachment_gluster:
-    type: OS::Cinder::VolumeAttachment
+  gluster_volume_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
     properties:
-      volume_id: { get_resource: gluster_volume }
-      instance_uuid: { get_resource: gluster_server }
-      mountpoint: /dev/xvdc
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: Configuring Gluster Volume..."
+        parted -s /dev/xvdc mktable gpt
+        parted -s /dev/xvdc mkpart primary 2048s 20%
+        parted -s /dev/xvdc set 1 lvm on
+        pvcreate /dev/xvdc1
+        vgcreate gluster /dev/xvdc1
+        for i in 1 2 3 4; do
+          lvcreate -l 25%VG -n gbrick$i gluster
+          mkfs.xfs -i size=512 /dev/gluster/gbrick$i
+          mkdir -p /bricks/brick$i
+          echo "/dev/gluster/gbrick$i /bricks/brick$i xfs defaults 0 2" >> /etc/fstab
+        done
+        mount -a
 
   ssh_key_config:
     type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
     properties:
       inputs:
       - name: ssh_priv
@@ -119,8 +163,38 @@ resources:
         UserKnownHostsFile /dev/null
         __EOF
 
+## SoftwareDeployment Section
+
+  update_system_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ update_system_config, gluster_server ]
+    properties:
+      config:
+        get_resource: update_system_config
+      server:
+        get_resource: gluster_server
+
+  gluster_service_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ update_system_deploy, gluster_service_config ]
+    properties:
+      config:
+        get_resource: gluster_service_config
+      server:
+        get_resource: gluster_server
+
+  gluster_volume_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ update_system_deploy, gluster_service_deploy, gluster_volume_config ]
+    properties:
+      config:
+        get_resource: gluster_volume_config
+      server:
+        get_resource: gluster_server
+
   ssh_key_deploy:
     type: OS::Heat::SoftwareDeployment
+    depends_on: [ update_system_deploy, ssh_key_config ]
     properties:
       config:
         get_resource: ssh_key_config
