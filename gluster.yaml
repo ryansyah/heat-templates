@@ -69,7 +69,9 @@ resources:
       user_data_format: SOFTWARE_CONFIG
       user_data: |
         #!/bin/bash -x
-        logger "$0: System Installed..."
+        logger "$0: Installing Additional Packages..."
+        yum -y install bash-completion-extras
+        logger "$0: Package Installation Complete..."
 
   volume_attachment_gluster:
     type: OS::Cinder::VolumeAttachment
@@ -87,8 +89,9 @@ resources:
       group: script
       config: |
         #!/bin/bash
-        logger "$0: Updating system..."
+        logger "$0: Updating System..."
         yum update -y
+        logger "$0: System Update Complete..."
 
   gluster_service_config:
     type: OS::Heat::SoftwareConfig
@@ -110,6 +113,7 @@ resources:
         firewall-cmd --zone=public --add-port=24007-24008/tcp --permanent
         # reload firewall rules
         firewall-cmd --reload
+        logger "$0: Gluster Installation Complete..."
 
   gluster_volume_config:
     type: OS::Heat::SoftwareConfig
@@ -131,6 +135,7 @@ resources:
           echo "/dev/gluster/gbrick$i /bricks/brick$i xfs defaults 0 2" >> /etc/fstab
         done
         mount -a
+        logger "$0: Gluster Volume Configuration Complete..."
 
   ssh_key_config:
     type: OS::Heat::SoftwareConfig
@@ -144,7 +149,7 @@ resources:
       group: script
       config: |
         #!/bin/bash
-        logger "$0: Creating SSH keys..."
+        logger "$0: SSH Key Configuration..."
         mkdir -p /root/.ssh
         echo $ssh_priv > /root/.ssh/id_rsa
         sed -e 's|-----BEGIN RSA PRIVATE KEY-----|-----BEGIN_RSA_PRIVATE_KEY-----|' \
@@ -162,6 +167,7 @@ resources:
         StrictHostKeyChecking no
         UserKnownHostsFile /dev/null
         __EOF
+        logger "$0: SSH Key Configuration Complete..."
 
 ## SoftwareDeployment Section
 
