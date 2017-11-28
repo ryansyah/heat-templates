@@ -52,6 +52,12 @@ parameters:
         max: 1024
       description: must be between 75 and 1024 GB.
 
+  index:
+    type: number
+    label: Offset Count for Volume Labeling
+    description: Offset Count for Volume Labeling
+    default: 1
+
 resources:
 
   gluster_volume:
@@ -120,6 +126,8 @@ resources:
     depends_on: [ gluster_server ]
     properties:
       group: script
+      inputs:
+      - name: offset
       config: |
         #!/bin/bash
         logger "$0: Configuring Gluster Volume..."
@@ -129,10 +137,11 @@ resources:
         pvcreate /dev/xvdc1
         vgcreate gluster /dev/xvdc1
         for i in 1 2 3 4; do
+          index=$((4*offset+$i))
           lvcreate -l 25%VG -n gbrick$i gluster
           mkfs.xfs -i size=512 /dev/gluster/gbrick$i
-          mkdir -p /bricks/brick$i
-          echo "/dev/gluster/gbrick$i /bricks/brick$i xfs defaults 0 2" >> /etc/fstab
+          mkdir -p /bricks/brick$index
+          echo "/dev/gluster/gbrick$i /bricks/brick$index xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
         done
         mount -a
         logger "$0: Gluster Volume Configuration Complete..."
@@ -182,7 +191,7 @@ resources:
 
   gluster_service_deploy:
     type: OS::Heat::SoftwareDeployment
-    depends_on: [ update_system_deploy, gluster_service_config ]
+    depends_on: [ gluster_service_config, gluster_server ]
     properties:
       config:
         get_resource: gluster_service_config
@@ -191,16 +200,18 @@ resources:
 
   gluster_volume_deploy:
     type: OS::Heat::SoftwareDeployment
-    depends_on: [ update_system_deploy, gluster_service_deploy, gluster_volume_config ]
+    depends_on: [ gluster_volume_config, gluster_server ]
     properties:
       config:
         get_resource: gluster_volume_config
       server:
         get_resource: gluster_server
+      input_values:
+        offset: { get_param: index }
 
   ssh_key_deploy:
     type: OS::Heat::SoftwareDeployment
-    depends_on: [ update_system_deploy, ssh_key_config ]
+    depends_on: [ ssh_key_config, gluster_server ]
     properties:
       config:
         get_resource: ssh_key_config
@@ -208,6 +219,7 @@ resources:
         get_resource: gluster_server
 
 outputs:
+
   server_ip:
     value:
       get_attr: [gluster_server, accessIPv4]
