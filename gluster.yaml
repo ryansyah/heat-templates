@@ -76,7 +76,7 @@ resources:
       user_data: |
         #!/bin/bash -x
         logger "$0: Installing Additional Packages..."
-        yum -y install bash-completion-extras
+        yum install -y bash-completion-extras ansible
         logger "$0: Package Installation Complete..."
 
   volume_attachment_gluster:
@@ -109,16 +109,24 @@ resources:
         logger "$0: Installing Gluster..."
         # setup Gluster SIG repo
         yum -y install centos-release-gluster38
-        # install gluster, samba, lvm2
-        yum -y install glusterfs-server samba lvm2
+        # install gluster-server, gluster-coreutils, lvm2
+        yum -y install glusterfs-server glusterfs-coreutils lvm2
         # enable service
         systemctl enable glusterd.service
         # start service
         systemctl start glusterd.service
         # add open up ports on firewall
-        firewall-cmd --zone=public --add-port=24007-24008/tcp --permanent
+        firewall-cmd --zone=public --add-service=glusterfs --permanent
         # reload firewall rules
         firewall-cmd --reload
+        # Install native client
+        yum install -y glusterfs glusterfs-fuse
+        # Install gdeploy
+        yum install -y https://download.gluster.org/pub/gluster/gdeploy/LATEST/CentOS7/gdeploy-2.0.1-9.noarch.rpm
+        # Install gstatus
+        git clone https://github.com/gluster/gstatus.git
+        cd gstatus
+        python setup.py install
         logger "$0: Gluster Installation Complete..."
 
   gluster_volume_config:
