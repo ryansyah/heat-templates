@@ -1,0 +1,43 @@
+heat_template_version: 2014-10-16
+
+description: Simple template to deploy a single compute instance
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance
+    default: CentOS 7 (PVHVM) (Orchestration)
+  
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: 1 GB General Purpose v1
+  
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance
+    default: my_key
+ 
+  private_network:
+    type: string
+    label: Private network name or ID
+    description: Network to attach instance to.
+    default: private-net
+
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      networks:
+        - network: { get_param: private_network }
+
+outputs:
+  public_ip:
+    description: public IP address of the deployed compute instance
+    value: { get_attr: [compute_instance, accessIPv4] }

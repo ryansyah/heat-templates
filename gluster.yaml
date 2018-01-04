@@ -1,7 +1,7 @@
-heat_template_version: 2014-10-16
+heat_template_version: 2015-10-15
 
 description: |
-  Create a single gluster server with an attached brick.
+  Create a single gluster server with an attached volume.
 
 parameters:
 
@@ -17,17 +17,30 @@ parameters:
     description: Type of instance (flavor) to be used
     default: 1 GB General Purpose v1
 
+  name:
+    type: string
+    label: server name
+    description: hostname of the server
+    default: c1n%index%
+
   key:
     type: string
     label: Key name
     description: Name of key-pair to be installed on the compute instance.
     default: my_key
 
-  name:
+  pubkey:
     type: string
-    label: server name
-    description: hostname of the server
-    default: n%index%c%index%
+    label: ssh public key
+    description: Public key for instance interconnect.
+    default: ''
+
+  privkey:
+    type: string
+    label: ssh private key
+    description: Private key for instance interconect.
+    hidden: true
+    default: ''
 
   volume_size:
     type: number
@@ -39,10 +52,15 @@ parameters:
         max: 1024
       description: must be between 75 and 1024 GB.
 
+  index:
+    type: number
+    label: Offset Count for Volume Labeling
+    description: Offset Count for Volume Labeling
+    default: 1
 
 resources:
 
-  gluster_brick:
+  gluster_volume:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: volume_size }
@@ -54,32 +72,162 @@ resources:
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: { get_param: key }
-      user_data_format: RAW
+      user_data_format: SOFTWARE_CONFIG
       user_data: |
-            #!/bin/bash -x
-            # Enable EPEL for dependencvies
-            yum -y install http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-            # setup Gluster SIG repo
-            yum -y install centos-release-gluster38
-            # install gluster, samba
-            yum -y install glusterfs-server samba
-            # enable service
-            systemctl enable glusterd.service
-            # start service
-            systemctl start glusterd.service
-            # add open up ports on firewall
-            firewall-cmd --zone=public --add-port=24007-24008/tcp --permanent
-            # reload firewall rules
-            firewall-cmd --reload
+        #!/bin/bash -x
+        logger "$0: Installing Additional Packages..."
+        yum install -y bash-completion-extras ansible
+        logger "$0: Package Installation Complete..."
 
-  volume_attachment_server1_brick1:
+  volume_attachment_gluster:
     type: OS::Cinder::VolumeAttachment
     properties:
-      volume_id: { get_resource: gluster_brick }
+      volume_id: { get_resource: gluster_volume }
       instance_uuid: { get_resource: gluster_server }
       mountpoint: /dev/xvdc
 
+## SoftwareConfig Section
+
+  update_system_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: Updating System..."
+        yum update -y
+        logger "$0: System Update Complete..."
+
+  gluster_service_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: Installing Gluster..."
+        # setup Gluster SIG repo
+        yum -y install centos-release-gluster38
+        # install gluster-server, gluster-coreutils, lvm2
+        yum -y install glusterfs-server glusterfs-coreutils lvm2
+        # enable service
+        systemctl enable glusterd.service
+        # start service
+        systemctl start glusterd.service
+        # add open up ports on firewall
+        firewall-cmd --zone=public --add-service=glusterfs --permanent
+        # reload firewall rules
+        firewall-cmd --reload
+        # Install native client
+        yum install -y glusterfs glusterfs-fuse
+        # Install gdeploy
+        yum install -y https://download.gluster.org/pub/gluster/gdeploy/LATEST/CentOS7/gdeploy-2.0.1-9.noarch.rpm
+        # Install gstatus
+        git clone https://github.com/gluster/gstatus.git
+        cd gstatus
+        python setup.py install
+        logger "$0: Gluster Installation Complete..."
+
+  gluster_volume_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      group: script
+      inputs:
+      - name: offset
+      config: |
+        #!/bin/bash
+        logger "$0: Configuring Gluster Volume..."
+        parted -s /dev/xvdc mktable gpt
+        parted -s /dev/xvdc mkpart primary 2048s 20%
+        parted -s /dev/xvdc set 1 lvm on
+        pvcreate /dev/xvdc1
+        vgcreate gluster /dev/xvdc1
+        for i in 1 2 3 4; do
+          index=$((4*offset+$i))
+          lvcreate -l 25%VG -n gbrick$i gluster
+          mkfs.xfs -i size=512 /dev/gluster/gbrick$i
+          mkdir -p /bricks/brick$index
+          echo "/dev/gluster/gbrick$i /bricks/brick$index xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
+        done
+        mount -a
+        logger "$0: Gluster Volume Configuration Complete..."
+
+  ssh_key_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      inputs:
+      - name: ssh_priv
+        default: { get_param: privkey }
+      - name: ssh_pub
+        default: { get_param: pubkey }
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: SSH Key Configuration..."
+        mkdir -p /root/.ssh
+        echo $ssh_priv > /root/.ssh/id_rsa
+        sed -e 's|-----BEGIN RSA PRIVATE KEY-----|-----BEGIN_RSA_PRIVATE_KEY-----|' \
+            -e 's|-----END RSA PRIVATE KEY-----|-----END_RSA_PRIVATE_KEY-----|' \
+            -e 's| |\n|g' \
+            -e 's|-----BEGIN_RSA_PRIVATE_KEY-----|-----BEGIN RSA PRIVATE KEY-----|' \
+            -e 's|-----END_RSA_PRIVATE_KEY-----|-----END RSA PRIVATE KEY-----|' \
+            -i /root/.ssh/id_rsa
+        echo $ssh_pub > /root/.ssh/id_rsa.pub
+        echo $ssh_pub > /root/.ssh/authorized_keys
+        chmod 0644 /root/.ssh/id_rsa.pub
+        chmod 0600 /root/.ssh/id_rsa
+        chmod 0644 /root/.ssh/authorized_keys
+        cat > /root/.ssh/config << __EOF
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        __EOF
+        logger "$0: SSH Key Configuration Complete..."
+
+## SoftwareDeployment Section
+
+  update_system_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ update_system_config, gluster_server ]
+    properties:
+      config:
+        get_resource: update_system_config
+      server:
+        get_resource: gluster_server
+
+  gluster_service_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ gluster_service_config, gluster_server ]
+    properties:
+      config:
+        get_resource: gluster_service_config
+      server:
+        get_resource: gluster_server
+
+  gluster_volume_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ gluster_volume_config, gluster_server ]
+    properties:
+      config:
+        get_resource: gluster_volume_config
+      server:
+        get_resource: gluster_server
+      input_values:
+        offset: { get_param: index }
+
+  ssh_key_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ ssh_key_config, gluster_server ]
+    properties:
+      config:
+        get_resource: ssh_key_config
+      server:
+        get_resource: gluster_server
+
 outputs:
+
   server_ip:
     value:
       get_attr: [gluster_server, accessIPv4]
