@@ -188,14 +188,14 @@ resources:
 
 ## SoftwareDeployment Section
 
-  update_system_deploy:
-    type: OS::Heat::SoftwareDeployment
-    depends_on: [ update_system_config, gluster_server ]
-    properties:
-      config:
-        get_resource: update_system_config
-      server:
-        get_resource: gluster_server
+#  update_system_deploy:
+#    type: OS::Heat::SoftwareDeployment
+#    depends_on: [ update_system_config, gluster_server ]
+#    properties:
+#      config:
+#        get_resource: update_system_config
+#      server:
+#        get_resource: gluster_server
 
   gluster_service_deploy:
     type: OS::Heat::SoftwareDeployment
@@ -206,16 +206,16 @@ resources:
       server:
         get_resource: gluster_server
 
-  gluster_volume_deploy:
-    type: OS::Heat::SoftwareDeployment
-    depends_on: [ gluster_volume_config, gluster_server ]
-    properties:
-      config:
-        get_resource: gluster_volume_config
-      server:
-        get_resource: gluster_server
-      input_values:
-        offset: { get_param: index }
+#  gluster_volume_deploy:
+#    type: OS::Heat::SoftwareDeployment
+#    depends_on: [ gluster_volume_config, gluster_server ]
+#    properties:
+#      config:
+#        get_resource: gluster_volume_config
+#      server:
+#        get_resource: gluster_server
+#      input_values:
+#        offset: { get_param: index }
 
   ssh_key_deploy:
     type: OS::Heat::SoftwareDeployment
