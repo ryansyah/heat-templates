@@ -137,13 +137,14 @@ resources:
         parted -s /dev/xvdc mkpart primary 2048s 20%
         parted -s /dev/xvdc set 1 lvm on
         pvcreate /dev/xvdc1
-        vgcreate gluster /dev/xvdc1
+        vgcreate vg_bricks /dev/xvdc1
+        lvcreate -l 100%FREE -T vg_bricks/thinpool
         for i in 1 2 3 4; do
           index=$((4*offset+$i))
-          lvcreate -l 25%VG -n gbrick$i gluster
-          mkfs.xfs -i size=512 /dev/gluster/gbrick$i
-          mkdir -p /bricks/brick$index
-          echo "/dev/gluster/gbrick$i /bricks/brick$index xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
+          lvcreate -V 2G -T vg_bricks/thinpool -n brick-$i
+          mkfs.xfs -i size=512 /dev/vg_bricks/brick-$i
+          mkdir -p /bricks/brick-$i
+          echo "/dev/vg_bricks/brick-$i /bricks/brick-$i xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
         done
         mount -a
         logger "$0: Gluster Volume Configuration Complete..."
