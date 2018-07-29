@@ -56,7 +56,7 @@ resources:
         properties:
           image: { get_param: image }
           flavor: { get_param: flavor }
-          name: c1n%index%
+          name: node%index%
           key: { get_resource: ssh_key } 
           pubkey: { get_attr: [ssh_key, public_key] }
           privkey: { get_attr: [ssh_key, private_key] }

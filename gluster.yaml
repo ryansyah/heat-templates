@@ -52,6 +52,12 @@ parameters:
         max: 1024
       description: must be between 75 and 1024 GB.
 
+  index:
+    type: number
+    label: Offset Count for Volume Labeling
+    description: Offset Count for Volume Labeling
+    default: 1
+
 resources:
 
   gluster_volume:
@@ -140,7 +146,6 @@ resources:
         vgcreate vg_bricks /dev/xvdc1
         lvcreate -l 100%FREE -T vg_bricks/thinpool
         for i in 1 2 3 4; do
-          index=$((4*offset+$i))
           lvcreate -V 2G -T vg_bricks/thinpool -n brick-$i
           mkfs.xfs -i size=512 /dev/vg_bricks/brick-$i
           mkdir -p /bricks/brick-$i
