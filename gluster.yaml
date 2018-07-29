@@ -21,7 +21,7 @@ parameters:
     type: string
     label: server name
     description: hostname of the server
-    default: c1n%index%
+    default: node%index%
 
   key:
     type: string
@@ -108,9 +108,9 @@ resources:
         #!/bin/bash
         logger "$0: Installing Gluster..."
         # setup Gluster SIG repo
-        yum -y install centos-release-gluster38
-        # install gluster-server, gluster-coreutils, lvm2
-        yum -y install glusterfs-server glusterfs-coreutils lvm2
+        yum -y install centos-release-gluster310
+        # install gluster-server
+        yum -y install glusterfs-server
         # enable service
         systemctl enable glusterd.service
         # start service
