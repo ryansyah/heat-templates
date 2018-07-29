@@ -122,7 +122,7 @@ resources:
         # Install native client
         yum install -y glusterfs glusterfs-fuse
         # Install gdeploy
-        yum install -y https://download.gluster.org/pub/gluster/gdeploy/LATEST/CentOS7/gdeploy-2.0.1-9.noarch.rpm
+        yum install -y gdeploy
         # Install gstatus
         git clone https://github.com/gluster/gstatus.git
         cd gstatus
