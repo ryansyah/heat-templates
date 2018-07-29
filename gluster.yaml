@@ -52,12 +52,6 @@ parameters:
         max: 1024
       description: must be between 75 and 1024 GB.
 
-  index:
-    type: number
-    label: Offset Count for Volume Labeling
-    description: Offset Count for Volume Labeling
-    default: 1
-
 resources:
 
   gluster_volume:
