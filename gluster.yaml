@@ -118,9 +118,9 @@ resources:
         # Install gdeploy
         yum install -y gdeploy
         # Install gstatus
-        git clone https://github.com/gluster/gstatus.git
-        cd gstatus
-        python setup.py install
+        # git clone https://github.com/gluster/gstatus.git
+        # cd gstatus
+        # python setup.py install
         logger "$0: Gluster Installation Complete..."
 
   gluster_volume_config:
