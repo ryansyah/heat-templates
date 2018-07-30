@@ -48,7 +48,7 @@ resources:
       name: { get_param: key }
       save_private_key: true
 
-  multi-gluster:
+  gluster_nodes:
     type: OS::Heat::ResourceGroup
     properties:
       count: { get_param: gluster_count }
