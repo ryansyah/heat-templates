@@ -1,42 +1,43 @@
 heat_template_version: 2015-10-15
 
 description: |
-  Installs multiple gluster servers with attached volume for bricks.
+  GlusterFS Practice Lab Template
+  Installs glusterfs on multiple CentOS7 servers with attached storage volume
 
 parameters:
 
   image:
+    label: Operating System
+    description: Image to be used for server 
     type: string
-    label: Image name or ID
-    description: Image to be used for server. 
     default: CentOS 7 (PVHVM) (Orchestration)
 
   flavor:
+    label: Server Size
+    description: Type of instance (flavor) to be used on the compute instance
     type: string
-    label: Flavor
-    description: Type of instance (flavor) to be used on the compute instance.
     default: 1 GB General Purpose v1
 
   key:
-    type: string
     label: Key name
-    description: Name of key-pair to be installed on the compute instance.
+    description: Name of key-pair to be installed on the compute instance
+    type: string
     default: my_key
 
   volume_size:
+    description: Size of the cloud block storage device (brick) to be created
     type: number
-    description: Size of the cloud block storage device (brick) to be created.
     default: 75
     constraints:
     - range:
         min: 75
         max: 1024
-      description: Must be between 75 and 1024 GB.
+      description: Must be between 75 and 1024 GB
 
   gluster_count:
-    type: number
     label: Gluster Server Count
     description: Number of gluster server instances to provision
+    type: number
     default: 2
 
 resources:

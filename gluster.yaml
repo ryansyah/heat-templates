@@ -1,50 +1,50 @@
 heat_template_version: 2015-10-15
 
 description: |
-  Create a single gluster server with an attached volume.
+  Install GlusterFS on a single CentOS7 server with an attached volume
 
 parameters:
 
   image:
-    type: string
     label: Image name or ID
     description: Server image id to use
+    type: string
     default: CentOS 7 (PVHVM) (Orchestration)
 
   flavor:
-    type: string
     label: Flavor
     description: Type of instance (flavor) to be used
+    type: string
     default: 1 GB General Purpose v1
 
   name:
-    type: string
     label: server name
+    type: string
     description: hostname of the server
     default: node%index%
 
   key:
-    type: string
     label: Key name
     description: Name of key-pair to be installed on the compute instance.
+    type: string
     default: my_key
 
   pubkey:
-    type: string
     label: ssh public key
     description: Public key for instance interconnect.
+    type: string
     default: ''
 
   privkey:
-    type: string
     label: ssh private key
     description: Private key for instance interconect.
+    type: string
     hidden: true
     default: ''
 
   volume_size:
-    type: number
     description: Size of the cloud block storage device (brick) to be created.
+    type: number
     default: 75
     constraints:
     - range:
@@ -53,9 +53,9 @@ parameters:
       description: must be between 75 and 1024 GB.
 
   index:
-    type: number
     label: Offset Count for Volume Labeling
     description: Offset Count for Volume Labeling
+    type: number
     default: 1
 
 resources:
@@ -108,6 +108,7 @@ resources:
         #!/bin/bash
         logger "$0: Installing Gluster..."
         # setup Gluster SIG repo
+        # https://wiki.centos.org/SpecialInterestGroup/Storage
         yum -y install centos-release-gluster310
         # install gluster-server
         yum -y install glusterfs-server
@@ -135,7 +136,8 @@ resources:
     properties:
       group: script
       inputs:
-      - name: offset
+      - name: node-name
+        default: { get_param: name }
       config: |
         #!/bin/bash
         logger "$0: Configuring Gluster Volume..."
@@ -146,10 +148,10 @@ resources:
         vgcreate vg_bricks /dev/xvdc1
         lvcreate -l 100%FREE -T vg_bricks/thinpool
         for i in 1 2 3 4; do
-          lvcreate -V 2G -T vg_bricks/thinpool -n brick-$i
-          mkfs.xfs -i size=512 /dev/vg_bricks/brick-$i
+          lvcreate -V 2G -T vg_bricks/thinpool -n node-name-brick-$i
+          mkfs.xfs -i size=512 /dev/vg_bricks/node-name-brick-$i
           mkdir -p /bricks/brick-$i
-          echo "/dev/vg_bricks/brick-$i /bricks/brick-$i xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
+          echo "/dev/vg_bricks/node-name-brick-$i /bricks/brick-$i xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
         done
         mount -a
         logger "$0: Gluster Volume Configuration Complete..."
@@ -206,16 +208,16 @@ resources:
       server:
         get_resource: gluster_server
 
-#  gluster_volume_deploy:
-#    type: OS::Heat::SoftwareDeployment
-#    depends_on: [ gluster_volume_config, gluster_server ]
-#    properties:
-#      config:
-#        get_resource: gluster_volume_config
-#      server:
-#        get_resource: gluster_server
-#      input_values:
-#        offset: { get_param: index }
+  gluster_volume_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ gluster_volume_config, gluster_server ]
+    properties:
+      config:
+        get_resource: gluster_volume_config
+      server:
+        get_resource: gluster_server
+      input_values:
+        node-name: { get_param: name }
 
   ssh_key_deploy:
     type: OS::Heat::SoftwareDeployment
