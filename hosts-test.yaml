@@ -46,7 +46,7 @@ resources:
     properties:
       config: { get_resource: export_hosts }
       servers: { get_attr: [server_group, refs_map] }
-      signal_transport: HEAT_SIGNAL
+      signal_transport: TEMP_URL_SIGNAL
 
   populate_hosts:
     type: OS::Heat::SoftwareConfig
@@ -73,7 +73,7 @@ resources:
     properties:
       config: { get_resource: populate_hosts }
       servers: { get_attr: [server_group, refs_map] }
-      signal_transport: HEAT_SIGNAL
+      signal_transport: TEMP_URL_SIGNAL
       input_values:
         hosts: { get_attr: [ export_hosts_sdg, hosts ] }
 
@@ -88,7 +88,8 @@ resources:
           image: { get_param: image }
           key_name: { get_param: key_name }
           user_data_format: SOFTWARE_CONFIG
-          software_config_transport: POLL_SERVER_HEAT
+          # POLL_TEMP_URL is only value supported by Rackspace Cloud
+          software_config_transport: POLL_TEMP_URL
 
 outputs:
   deployment_results:
