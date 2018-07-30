@@ -79,11 +79,6 @@ resources:
       flavor: { get_param: flavor }
       key_name: { get_param: key }
       user_data_format: SOFTWARE_CONFIG
-      user_data: |
-        #!/bin/bash -x
-        logger "$0: Installing Additional Packages..."
-        yum install -y bash-completion-extras ansible
-        logger "$0: Package Installation Complete..."
 
   volume_attachment_gluster:
     type: OS::Cinder::VolumeAttachment
@@ -113,6 +108,7 @@ resources:
       config: |
         #!/bin/bash
         logger "$0: Installing Gluster..."
+        yum install -y bash-completion-extras ansible
         # setup Gluster SIG repo
         # https://wiki.centos.org/SpecialInterestGroup/Storage
         yum -y install centos-release-gluster310
@@ -130,10 +126,6 @@ resources:
         yum install -y glusterfs glusterfs-fuse
         # Install gdeploy
         yum install -y gdeploy
-        # Install gstatus
-        # git clone https://github.com/gluster/gstatus.git
-        # cd gstatus
-        # python setup.py install
         logger "$0: Gluster Installation Complete..."
 
   gluster_volume_config:
