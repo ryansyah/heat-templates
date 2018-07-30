@@ -55,6 +55,7 @@ parameters:
   cbs_mount_point:
     label: cbs mount point
     description: The location where the volume is exposed on the instance
+    type: string
     default: /dev/xvdc
 
   index:
