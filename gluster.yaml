@@ -52,6 +52,11 @@ parameters:
         max: 1024
       description: must be between 75 and 1024 GB.
 
+  cbs_mount_point:
+    label: cbs mount point
+    description: The location where the volume is exposed on the instance
+    default: /dev/xvdc
+
   index:
     label: Offset Count for Volume Labeling
     description: Offset Count for Volume Labeling
@@ -84,7 +89,7 @@ resources:
     properties:
       volume_id: { get_resource: gluster_volume }
       instance_uuid: { get_resource: gluster_server }
-      mountpoint: /dev/xvdc
+      mountpoint: { get_param: cbs_mount_point }
 
 ## SoftwareConfig Section
 
