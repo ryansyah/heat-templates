@@ -1,0 +1,96 @@
+heat_template_version: 2015-10-15
+
+description: >
+  This template demonstrates how to exchange hostnames and IP addresses to populate /etc/hosts.
+
+parameters:
+
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for server. 
+    default: CentOS 7 (PVHVM) (Orchestration)
+
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used on the compute instance.
+    default: 1 GB General Purpose v1
+
+  key_name:
+    type: string
+    label: Key name
+    description: Name of key-pair to be installed on the compute instance.
+    default: my_key
+
+  instance_count:
+    type: number
+    label: Server Count
+    description: Number of gluster server instances to provision
+    default: 2
+
+resources:
+
+  export_hosts:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      outputs:
+        - name: hosts
+      group: script
+      config: |
+        #!/bin/sh
+        (echo -n $(facter ipaddress); echo -n ' '; echo $(facter hostname)) > ${heat_outputs_path}.hosts
+
+  export_hosts_sdg:
+    type: OS::Heat::SoftwareDeploymentGroup
+    properties:
+      config: { get_resource: export_hosts }
+      servers: { get_attr: [server_group, refs_map] }
+      signal_transport: TEMP_URL_SIGNAL
+
+  populate_hosts:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: hosts
+      group: script
+      config: |
+        #!/usr/bin/env python
+        import ast
+        import os
+        import string
+        import subprocess
+        hosts = os.getenv('hosts')
+        if hosts is not None:
+            hosts = ast.literal_eval(string.replace(hosts, '\n', '\\n'))
+        with open('/etc/hosts', 'a') as hosts_file:
+          for ip_host in hosts.values():
+              hosts_file.write(ip_host.rstrip() + '\n')
+
+  populate_hosts_sdg:
+    type: OS::Heat::SoftwareDeploymentGroup
+    depends_on: export_hosts_sdg
+    properties:
+      config: { get_resource: populate_hosts }
+      servers: { get_attr: [server_group, refs_map] }
+      signal_transport: TEMP_URL_SIGNAL
+      input_values:
+        hosts: { get_attr: [ export_hosts_sdg, hosts ] }
+
+  server_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: instance_count }
+      resource_def:
+        type: OS::Nova::Server
+        properties:
+          flavor: { get_param: flavor }
+          image: { get_param: image }
+          key_name: { get_param: key_name }
+          user_data_format: SOFTWARE_CONFIG
+          # POLL_TEMP_URL is only value supported by Rackspace Cloud
+          software_config_transport: POLL_TEMP_URL
+
+outputs:
+  deployment_results:
+    value: { get_attr: [export_hosts_sdg, hosts] }
