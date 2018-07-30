@@ -1,0 +1,71 @@
+heat_template_version: 2015-10-15
+
+description: |
+  Install single CentOS7 server with an attached volume
+
+parameters:
+
+  image:
+    label: Image name or ID
+    description: Server image id to use
+    type: string
+    default: CentOS 7 (PVHVM) (Orchestration)
+
+  flavor:
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    type: string
+    default: 1 GB General Purpose v1
+
+  name:
+    label: server name
+    type: string
+    description: hostname of the server
+    default: n%index%
+
+  key_name:
+    label: Key name
+    description: Name of key-pair to be installed on the compute instance
+    type: string
+    default: my_key
+
+  volume_size:
+    description: Size of the cloud block storage device (brick) to be created
+    type: number
+    default: 75
+    constraints:
+    - range:
+        min: 75
+        max: 1024
+      description: must be between 75 and 1024 GB.
+
+  cbs_mount_point:
+    label: cbs mount point
+    description: The location where the volume is exposed on the instance
+    type: string
+    default: /dev/xvdc
+
+resources:
+
+  cbs_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+
+  server_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      user_data_format: SOFTWARE_CONFIG
+      # POLL_TEMP_URL is only value supported by Rackspace Cloud
+      software_config_transport: POLL_TEMP_URL
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: cbs_volume }
+      instance_uuid: { get_resource: server_instance }
+      mountpoint: { get_param: cbs_mount_point }
