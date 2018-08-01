@@ -30,6 +30,19 @@ parameters:
     description: Name of key-pair to be installed on the compute instance
     default: my_key
 
+  pubkey:
+    type: string
+    label: ssh public key
+    description: Public key for instance interconnect.
+    default: ''
+
+  privkey:
+    type: string
+    label: ssh private key
+    description: Private key for instance interconect.
+    hidden: true
+    default: ''
+
   volume_size:
     type: number
     description: Size of the cloud block storage device (brick) to be created
@@ -48,6 +61,13 @@ parameters:
 
 resources:
 
+  # This key pair must already exist
+#  ssh_key:
+#    type: OS::Nova::KeyPair
+#    properties:
+#      name: { get_param: key_name }
+#      save_private_key: true
+
   gluster_volume:
     type: OS::Cinder::Volume
     properties:
@@ -61,6 +81,8 @@ resources:
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: { get_param: key_name }
+      # Required for SoftwareDeployments
+      user_data_format: SOFTWARE_CONFIG
 
   volume_attachment_gluster:
     type: OS::Cinder::VolumeAttachment
@@ -141,6 +163,38 @@ resources:
         done
         logger "$0: Gluster Volume Configuration Complete..."
 
+  ssh_key_config:
+    type: OS::Heat::SoftwareConfig
+    depends_on: [ gluster_server ]
+    properties:
+      inputs:
+      - name: ssh_priv
+        default: { get_param: privkey }
+      - name: ssh_pub
+        default: { get_param: pubkey }
+      group: script
+      config: |
+        #!/bin/bash
+        logger "$0: SSH Key Configuration..."
+        mkdir -p /root/.ssh
+        echo $ssh_priv > /root/.ssh/id_rsa
+        sed -e 's|-----BEGIN RSA PRIVATE KEY-----|-----BEGIN_RSA_PRIVATE_KEY-----|' \
+            -e 's|-----END RSA PRIVATE KEY-----|-----END_RSA_PRIVATE_KEY-----|' \
+            -e 's| |\n|g' \
+            -e 's|-----BEGIN_RSA_PRIVATE_KEY-----|-----BEGIN RSA PRIVATE KEY-----|' \
+            -e 's|-----END_RSA_PRIVATE_KEY-----|-----END RSA PRIVATE KEY-----|' \
+            -i /root/.ssh/id_rsa
+        echo $ssh_pub > /root/.ssh/id_rsa.pub
+        echo $ssh_pub > /root/.ssh/authorized_keys
+        chmod 0644 /root/.ssh/id_rsa.pub
+        chmod 0600 /root/.ssh/id_rsa
+        chmod 0644 /root/.ssh/authorized_keys
+        cat > /root/.ssh/config << __EOF
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        __EOF
+        logger "$0: SSH Key Configuration Complete..."
+
 ## SoftwareDeployment Section
 
 #  update_system_deploy:
@@ -171,3 +225,12 @@ resources:
         get_resource: gluster_server
       input_values:
         node-name: { get_param: name }
+
+  ssh_key_deploy:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: [ ssh_key_config, gluster_server ]
+    properties:
+      config:
+        get_resource: ssh_key_config
+      server:
+        get_resource: gluster_server

@@ -60,6 +60,8 @@ resources:
           flavor: { get_param: flavor }
           name: n%index%
           key_name: { get_resource: ssh_key }
+          pubkey: { get_attr: [ssh_key, public_key] }
+          privkey: { get_attr: [ssh_key, private_key] }
 
 outputs:
 
