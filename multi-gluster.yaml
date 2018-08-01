@@ -1,9 +1,17 @@
 heat_template_version: 2015-10-15
 
 description: |
-  GlusterFS Practice Lab Template
-  Installs glusterfs on multiple CentOS7 servers with attached storage volume
-  Depends upon gluster.yaml to run
+  GlusterFS Practice Lab Heat Template
+  Provides:
+    - multiple servers with attached storage (gluster_count: 2)
+    - common ssh-key distributed to root user on all hosts (key_name)
+    - lvm thinpool configuration of attached storage resource
+    - 4x 2G xfs bricks created on thinpool, persistently mounted on all hosts
+    - yum update of all hosts
+    - gluster SIG repo enabled
+    - glusterfs-server-3.10 installed, started, and enabled
+    - gluster service enabled in firewalld
+  Depends upon gluster.yaml
 
 parameters:
 
