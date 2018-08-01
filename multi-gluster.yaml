@@ -11,7 +11,8 @@ description: |
     - gluster SIG repo enabled
     - glusterfs-server-3.10 installed, started, and enabled
     - gluster service enabled in firewalld
-  Depends upon gluster.yaml
+  Requires:
+    - gluster.yaml
 
 parameters:
 
