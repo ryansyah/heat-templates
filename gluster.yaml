@@ -1,7 +1,8 @@
 heat_template_version: 2015-10-15
 
 description: |
-  Install GlusterFS on a single CentOS7 server with an attached volume
+  Installs GlusterFS on a single CentOS7 server with an attached volume
+  This template is designed to be called from multi-gluster.yaml
 
 parameters:
 
@@ -60,9 +61,6 @@ resources:
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: { get_param: key_name }
-      user_data_format: SOFTWARE_CONFIG
-      # POLL_TEMP_URL is only value supported by Rackspace Cloud
-      software_config_transport: POLL_TEMP_URL
 
   volume_attachment_gluster:
     type: OS::Cinder::VolumeAttachment
@@ -137,8 +135,11 @@ resources:
           echo "/dev/vg_bricks/node-name-brick-$i /bricks/brick-$i xfs rw,inode64,noatime,nouuid 0 0" >> /etc/fstab
         done
         mount -a
+        setenforce 0
+        for i in 1 2 3 4; do
+          mkdir /bricks/brick-$i/brick
+        done
         logger "$0: Gluster Volume Configuration Complete..."
-
 
 ## SoftwareDeployment Section
 

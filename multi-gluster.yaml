@@ -3,6 +3,7 @@ heat_template_version: 2015-10-15
 description: |
   GlusterFS Practice Lab Template
   Installs glusterfs on multiple CentOS7 servers with attached storage volume
+  Depends upon gluster.yaml to run
 
 parameters:
 
