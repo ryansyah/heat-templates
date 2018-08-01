@@ -32,7 +32,7 @@ parameters:
     type: string
     label: Key name
     description: Name of key-pair to be installed on the compute instance
-    default: my_key
+    default: gluster_key
 
   volume_size:
     type: number
