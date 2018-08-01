@@ -47,12 +47,6 @@ parameters:
 
 resources:
 
-  ssh_key:
-    type: OS::Nova::KeyPair
-    properties:
-      name: { get_param: key_name }
-      save_private_key: true
-
   gluster_volume:
     type: OS::Cinder::Volume
     properties:
@@ -65,8 +59,9 @@ resources:
       name: { get_param: name }
       image: { get_param: image }
       flavor: { get_param: flavor }
-      key_name: { get_resource: ssh_key }
+      key_name: { get_param: key_name }
       user_data_format: SOFTWARE_CONFIG
+      # POLL_TEMP_URL is only value supported by Rackspace Cloud
       software_config_transport: POLL_TEMP_URL
 
   volume_attachment_gluster:
@@ -175,9 +170,3 @@ resources:
         get_resource: gluster_server
       input_values:
         node-name: { get_param: name }
-
-outputs:
-
-  private_key:
-    description: Private key
-    value: { get_attr: [ssh_key, private_key] }

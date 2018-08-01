@@ -48,67 +48,17 @@ resources:
       name: { get_param: key_name }
       save_private_key: true
 
-  export_hosts:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      outputs:
-        - name: hosts
-      group: script
-      config: |
-        #!/bin/sh
-        (echo -n $(facter ipaddress); echo -n ' '; echo $(facter hostname)) > ${heat_outputs_path}.hosts
-
-  export_hosts_sdg:
-    type: OS::Heat::SoftwareDeploymentGroup
-    properties:
-      config: { get_resource: export_hosts }
-      servers: { get_attr: [gluster_nodes, refs_map] }
-      signal_transport: TEMP_URL_SIGNAL
-
-  populate_hosts:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      inputs:
-        - name: hosts
-      group: script
-      config: |
-        #!/usr/bin/env python
-        import ast
-        import os
-        import string
-        import subprocess
-        hosts = os.getenv('hosts')
-        if hosts is not None:
-            hosts = ast.literal_eval(string.replace(hosts, '\n', '\\n'))
-        with open('/etc/hosts', 'a') as hosts_file:
-          for ip_host in hosts.values():
-              hosts_file.write(ip_host.rstrip() + '\n')
-
-  populate_hosts_sdg:
-    type: OS::Heat::SoftwareDeploymentGroup
-    depends_on: export_hosts_sdg
-    properties:
-      config: { get_resource: populate_hosts }
-      servers: { get_attr: [gluster_nodes, refs_map] }
-      signal_transport: TEMP_URL_SIGNAL
-      input_values:
-        hosts: { get_attr: [ export_hosts_sdg, hosts ] }
-
-
   gluster_nodes:
     type: OS::Heat::ResourceGroup
     properties:
       count: { get_param: gluster_count }
       resource_def:
-        type: OS::Nova::Server
+        type: gluster.yaml
         properties:
           image: { get_param: image }
           flavor: { get_param: flavor }
           name: n%index%
           key_name: { get_resource: ssh_key }
-          user_data_format: SOFTWARE_CONFIG
-          # POLL_TEMP_URL is only value supported by Rackspace Cloud
-          software_config_transport: POLL_TEMP_URL
 
 outputs:
 
