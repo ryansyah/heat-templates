@@ -6,45 +6,32 @@ description: |
 parameters:
 
   image:
+    type: string
     label: Image name or ID
     description: Server image id to use
-    type: string
     default: CentOS 7 (PVHVM) (Orchestration)
 
   flavor:
+    type: string
     label: Flavor
     description: Type of instance (flavor) to be used
-    type: string
     default: 1 GB General Purpose v1
 
   name:
-    label: server name
     type: string
+    label: server name
     description: hostname of the server
-    default: node%index%
+    default: node
 
-  key:
+  key_name:
+    type: string
     label: Key name
     description: Name of key-pair to be installed on the compute instance
-    type: string
     default: my_key
 
-  pubkey:
-    label: ssh public key
-    description: Public key for instance interconnect
-    type: string
-    default: ''
-
-  privkey:
-    label: ssh private key
-    description: Private key for instance interconect
-    type: string
-    hidden: true
-    default: ''
-
   volume_size:
-    description: Size of the cloud block storage device (brick) to be created
     type: number
+    description: Size of the cloud block storage device (brick) to be created
     default: 75
     constraints:
     - range:
@@ -53,23 +40,24 @@ parameters:
       description: must be between 75 and 1024 GB.
 
   cbs_mount_point:
+    type: string
     label: cbs mount point
     description: The location where the volume is exposed on the instance
-    type: string
     default: /dev/xvdc
 
-  index:
-    label: Offset Count for Volume Labeling
-    description: Offset Count for Volume Labeling
-    type: number
-    default: 1
-
 resources:
+
+  ssh_key:
+    type: OS::Nova::KeyPair
+    properties:
+      name: { get_param: key_name }
+      save_private_key: true
 
   gluster_volume:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: volume_size }
+      name: { get_param: name }
 
   gluster_server:
     type: OS::Nova::Server
@@ -77,8 +65,9 @@ resources:
       name: { get_param: name }
       image: { get_param: image }
       flavor: { get_param: flavor }
-      key_name: { get_param: key }
+      key_name: { get_resource: ssh_key }
       user_data_format: SOFTWARE_CONFIG
+      software_config_transport: POLL_TEMP_URL
 
   volume_attachment_gluster:
     type: OS::Cinder::VolumeAttachment
@@ -154,37 +143,6 @@ resources:
         mount -a
         logger "$0: Gluster Volume Configuration Complete..."
 
-  ssh_key_config:
-    type: OS::Heat::SoftwareConfig
-    depends_on: [ gluster_server ]
-    properties:
-      inputs:
-      - name: ssh_priv
-        default: { get_param: privkey }
-      - name: ssh_pub
-        default: { get_param: pubkey }
-      group: script
-      config: |
-        #!/bin/bash
-        logger "$0: SSH Key Configuration..."
-        mkdir -p /root/.ssh
-        echo $ssh_priv > /root/.ssh/id_rsa
-        sed -e 's|-----BEGIN RSA PRIVATE KEY-----|-----BEGIN_RSA_PRIVATE_KEY-----|' \
-            -e 's|-----END RSA PRIVATE KEY-----|-----END_RSA_PRIVATE_KEY-----|' \
-            -e 's| |\n|g' \
-            -e 's|-----BEGIN_RSA_PRIVATE_KEY-----|-----BEGIN RSA PRIVATE KEY-----|' \
-            -e 's|-----END_RSA_PRIVATE_KEY-----|-----END RSA PRIVATE KEY-----|' \
-            -i /root/.ssh/id_rsa
-        echo $ssh_pub > /root/.ssh/id_rsa.pub
-        echo $ssh_pub > /root/.ssh/authorized_keys
-        chmod 0644 /root/.ssh/id_rsa.pub
-        chmod 0600 /root/.ssh/id_rsa
-        chmod 0644 /root/.ssh/authorized_keys
-        cat > /root/.ssh/config << __EOF
-        StrictHostKeyChecking no
-        UserKnownHostsFile /dev/null
-        __EOF
-        logger "$0: SSH Key Configuration Complete..."
 
 ## SoftwareDeployment Section
 
@@ -217,17 +175,8 @@ resources:
       input_values:
         node-name: { get_param: name }
 
-  ssh_key_deploy:
-    type: OS::Heat::SoftwareDeployment
-    depends_on: [ ssh_key_config, gluster_server ]
-    properties:
-      config:
-        get_resource: ssh_key_config
-      server:
-        get_resource: gluster_server
-
 outputs:
 
-  server_ip:
-    value:
-      get_attr: [gluster_server, accessIPv4]
+  private_key:
+    description: Private key
+    value: { get_attr: [ssh_key, private_key] }
