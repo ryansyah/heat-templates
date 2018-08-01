@@ -51,6 +51,7 @@ resources:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: volume_size }
+      name: { get_param: name }
 
   server_instance:
     type: OS::Nova::Server
