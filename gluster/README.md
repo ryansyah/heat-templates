@@ -3,12 +3,12 @@ Heat template: GlusterFS Practice Lab (2 nodes)
 
 Requirements
 ------------
-* Access to ian OpenStack Cloud with Heat. [Rackspace Public Cloud]|(https://www.rackspace.com/cloud/public) recommended.
+* Access to an OpenStack Cloud with Heat. [Rackspace Public Cloud](https://www.rackspace.com/cloud/public) recommended.
 * CentOS 7 cloud image.
 
 Provides
 ------------
-* multiple servers with attached storage (gluster_count: 2)
+* multiple servers with attached cloud block storage (gluster_count: 2)
 * common ssh-key distributed to root user on all hosts (key_name)
 * lvm thinpool configuration of attached storage resource
 * 4x 2G xfs bricks created on thinpool, persistently mounted on all hosts
