@@ -1,7 +1,14 @@
-# heat-templates
-Heat templates for Rackspace Public Cloud
+==============
+Heat Templates
+==============
 
-These heat templates are intended to work with the Rackspace public cloud.
-Ideally, comments will be added to the templates in-line so they should be self-explanatory.
+Heat is a service to orchestrate multiple composite cloud applications using
+templates
 
+This repository provides:
+
+* Example templates which demonstrate Heat functionality
+* Templates for my own personal use
+
+These heat templates are tested to work with the Rackspace Public Cloud.
 
