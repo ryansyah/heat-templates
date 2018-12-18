@@ -1,14 +1,24 @@
 heat_template_version: 2015-04-30
 
 resources:
+  ssh_key:
+  type: OS::Nova::KeyPair
+  properties:
+    name: private_access_key
+    save_private_key: true
+
   compute_instance:
     type: OS::Nova::Server
     properties:
       flavor: 1 GB General Purpose v1
       image: c656f3c8-12ff-4b2e-9333-9a857c553292
-      name: Single Server Stack
+      key_name: { get_resource: ssh_key }
+      name: minecraft.morphium.org
 
 outputs:
   public_ip:
     description: public IP address of the deployed compute instance
     value: { get_attr: [compute_instance, accessIPv4] }
+  private_key:
+    value:
+      get_attr: [ssh_key, private_key]
